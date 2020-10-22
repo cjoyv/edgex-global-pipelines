@@ -15,7 +15,7 @@
 //
 
 // remove once stable tag is moved to include the edgeXUpdateNamedTag changes
-@Library("edgex-global-pipelines@experimental") _
+@Library("edgex-global-pipelines@8d21736ef72208ffb55a1174274ec501b8863ca7") _
 
 pipeline {
     agent {
@@ -110,44 +110,19 @@ pipeline {
 
         // this will need to happen on an isolated node to not interfere with git-semver
         stage('Publish to GitHub pages') {
-            when {
-                beforeAgent true
-                expression { env.BRANCH_NAME =~ /^master$/ }
-            }
+//            when {
+//                beforeAgent true
+//                expression { env.BRANCH_NAME =~ /^master$/ }
+//            }
             agent {
                 label 'centos7-docker-4c-2g'
             }
+            environment {
+                DRY_RUN = 'true'
+            }
             steps {
                 script {
-                    def originalCommitMsg = sh(script: 'git log --format=%B -n 1 | grep -v Signed-off-by | head -n 1', returnStdout: true)
-
-                    // cleanup workspace
-                    cleanWs()
-
-                    dir('edgex-docs-clean') {
-                        git url: 'git@github.com:edgexfoundry/edgex-global-pipelines.git', branch: 'gh-pages', credentialsId: 'edgex-jenkins-ssh', changelog: false, poll: false
-                        unstash 'site-contents'
-
-                        sh 'ls -al .'
-                        sh 'cp -rlf docs/* .'
-                        sh 'rm -rf docs'
-                        sh 'ls -al .'
-
-                        def changesDetected = sh(script: 'git diff-index --quiet HEAD --', returnStatus: true)
-                        echo "We have detected there are changes to commit: [${changesDetected}] [${changesDetected != 0}]"
-
-                        if (changesDetected != 0) {
-                            sh 'git config --global user.email "jenkins@edgexfoundry.org"'
-                            sh 'git config --global user.name "EdgeX Jenkins"'
-                            sh 'git add .'
-
-                            sh "git commit -s -m 'ci: ${originalCommitMsg}'"
-
-                            sshagent(credentials: ['edgex-jenkins-ssh']) {
-                                sh 'git push origin gh-pages'
-                            }
-                        }
-                    }
+                    edgeXGHPagesPublish(repoUrl: "git@github.com:edgexfoundry/edgex-global-pipelines.git")
                 }
             }
         }
