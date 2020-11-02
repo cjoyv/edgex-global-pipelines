@@ -15,7 +15,7 @@
 //
 
 // remove once stable tag is moved to include the edgeXUpdateNamedTag changes
-@Library("edgex-global-pipelines@experimental") _
+@Library("edgex-global-pipelines@4d0aa066e37af8b81724c7563ce9af52f76f9b5a") _
 
 pipeline {
     agent {
@@ -32,6 +32,7 @@ pipeline {
 
     environment {
         SEMVER_BRANCH = 'master'
+        DRY_RUN = true
     }
 
     stages {
@@ -53,31 +54,31 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            when { not { expression { env.BRANCH_NAME =~ /^master$/ } } }
-            agent {
-                docker {
-                    image "${DOCKER_REGISTRY}:10003/edgex-devops/egp-unit-test:gradle"
-                    args '-u 0:0 --privileged'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh 'gradle -Dgradle.user.home=/gradleCache clean test --parallel'
-
-                junit allowEmptyResults: true, testResults: 'target/test-results/test/*.xml'
-
-                // Test summary
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'target/reports/tests/test',
-                    reportFiles: 'index.html',
-                    reportName: 'Unit Test Summary'
-                ])
-            }
-        }
+//        stage('Test') {
+//            when { not { expression { env.BRANCH_NAME =~ /^master$/ } } }
+//            agent {
+//                docker {
+//                    image "${DOCKER_REGISTRY}:10003/edgex-devops/egp-unit-test:gradle"
+//                    args '-u 0:0 --privileged'
+//                    reuseNode true
+//                }
+//            }
+//            steps {
+//                sh 'gradle -Dgradle.user.home=/gradleCache clean test --parallel'
+//
+//                junit allowEmptyResults: true, testResults: 'target/test-results/test/*.xml'
+//
+//                // Test summary
+//                publishHTML([
+//                    allowMissing: true,
+//                    alwaysLinkToLastBuild: true,
+//                    keepAll: true,
+//                    reportDir: 'target/reports/tests/test',
+//                    reportFiles: 'index.html',
+//                    reportName: 'Unit Test Summary'
+//                ])
+//            }
+//        }
 
         stage('Generate Documentation') {
             agent {
@@ -102,7 +103,6 @@ pipeline {
             }
             steps {
                 sh 'mkdocs build'
-
                 // stash the site contents generated from mkdocs build
                 stash name: 'site-contents', includes: 'docs/**', useDefaultExcludes: false
             }
@@ -110,10 +110,10 @@ pipeline {
 
         // this will need to happen on an isolated node to not interfere with git-semver
         stage('Publish to GitHub pages') {
-            when {
-                beforeAgent true
-                expression { env.BRANCH_NAME =~ /^master$/ }
-            }
+//            when {
+//                beforeAgent true
+//                expression { env.BRANCH_NAME =~ /^master$/ }
+//            }
             agent {
                 label 'centos7-docker-4c-2g'
             }
